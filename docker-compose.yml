@@ -1,0 +1,54 @@
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql_db_docker
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "root@12345"
+      MYSQL_DATABASE: scm20
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin_docker
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+    ports:
+      - "8081:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  springboot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: scm-springboot:1.0
+    container_name: scm_springboot_project
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: "8080"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/scm20"
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: "root@12345"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8082:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
